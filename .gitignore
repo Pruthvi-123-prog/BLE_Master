@@ -102,8 +102,9 @@ gradle-*.zip
 *.swp
 *~
 
-# Resized images folder (source images, not needed in repo)
-Resized_Images/
+# Resized images folder (exclude resized copies, keep original)
+Resized_Images/*
+!Resized_Images/original.png
 
 # Original design files
-designarena_image_ro0bw3cq.jpg
+designarena_image_ro0bw3cq.*
