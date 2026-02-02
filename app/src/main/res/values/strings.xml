@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">BLE Master</string>
+    
+    <!-- Main Screen -->
+    <string name="enter_message">Enter message to broadcast</string>
+    <string name="byte_counter">%1$d / 24 bytes</string>
+    <string name="start_broadcast">Start Broadcast</string>
+    <string name="stop_broadcast">Stop Broadcast</string>
+    <string name="status_broadcasting">Broadcasting…</string>
+    <string name="status_stopped">Stopped</string>
+    <string name="status_error">Error: %1$s</string>
+    
+    <!-- Settings Screen -->
+    <string name="settings">Settings</string>
+    <string name="broadcast_interval">Broadcast Interval</string>
+    <string name="interval_ms">%1$d ms</string>
+    <string name="transmission_power">Transmission Power</string>
+    <string name="power_low">Low</string>
+    <string name="power_medium">Medium</string>
+    <string name="power_high">High</string>
+    
+    <!-- Permissions -->
+    <string name="bluetooth_permission_title">Bluetooth Permission Required</string>
+    <string name="bluetooth_permission_message">BLE Master requires Bluetooth permissions to broadcast messages. Please grant the required permissions to continue.</string>
+    <string name="grant_permission">Grant Permission</string>
+    <string name="permission_denied">Permission Denied</string>
+    <string name="permission_denied_message">Bluetooth permissions are required for this app to function. Please enable them in Settings.</string>
+    <string name="open_settings">Open Settings</string>
+    
+    <!-- Ethical Use Warning -->
+    <string name="ethical_warning_title">Ethical Use Warning</string>
+    <string name="ethical_warning_message">This application broadcasts BLE advertising packets that can be received by nearby devices.\n\n⚠️ Important:\n• Only broadcast appropriate content\n• Respect others\' privacy and space\n• Do not use for spam or malicious purposes\n• Comply with local regulations\n\nBy using this app, you agree to use it responsibly and ethically.</string>
+    <string name="i_understand">I Understand</string>
+    <string name="decline">Decline</string>
+    
+    <!-- Privacy Policy -->
+    <string name="privacy_policy">Privacy Policy</string>
+    <string name="privacy_policy_content">BLE Master Privacy Policy\n\nData Broadcast Nature:\nThis application broadcasts user-entered text messages via Bluetooth Low Energy (BLE) advertising packets. These broadcasts:\n\n• Are transmitted wirelessly and can be received by any BLE-capable device within range\n• Contain only the text you enter (up to 24 bytes)\n• Do not include personal device identifiers when device name is disabled\n• Are not encrypted and should not contain sensitive information\n\nData Storage:\n• Your broadcast settings (interval, power level) are stored locally on your device\n• No data is transmitted to external servers\n• No analytics or tracking is performed\n\nYour Responsibility:\n• You are solely responsible for the content you broadcast\n• Do not broadcast personal, sensitive, or offensive content</string>
+    
+    <!-- Notifications -->
+    <string name="notification_channel_name">BLE Broadcast</string>
+    <string name="notification_channel_description">Shows when BLE broadcasting is active</string>
+    <string name="notification_title">BLE Master Active</string>
+    <string name="notification_message">Broadcasting: %1$s</string>
+    <string name="stop_action">Stop</string>
+    
+    <!-- Errors -->
+    <string name="error_ble_not_supported">BLE advertising is not supported on this device</string>
+    <string name="error_bluetooth_disabled">Please enable Bluetooth</string>
+    <string name="error_data_too_large">Message too large, truncating…</string>
+    <string name="error_too_many_advertisers">Too many advertisers active</string>
+    <string name="error_internal">Internal error occurred</string>
+    <string name="error_feature_unsupported">Feature not supported</string>
+    <string name="error_unknown">Unknown error: %1$d</string>
+</resources>

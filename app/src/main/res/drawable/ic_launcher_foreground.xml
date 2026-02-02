@@ -1,0 +1,72 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    
+    <!-- Background glow circle -->
+    <path
+        android:fillColor="#2D2D2D"
+        android:pathData="M54,54m-40,0a40,40 0,1 1,80 0a40,40 0,1 1,-80 0"/>
+    
+    <!-- Inner accent ring -->
+    <path
+        android:fillColor="#00000000"
+        android:strokeColor="#BB86FC"
+        android:strokeWidth="2"
+        android:pathData="M54,54m-35,0a35,35 0,1 1,70 0a35,35 0,1 1,-70 0"/>
+    
+    <!-- Bluetooth icon centered and enhanced -->
+    <group
+        android:translateX="34"
+        android:translateY="29">
+        
+        <!-- Main Bluetooth symbol -->
+        <path
+            android:fillColor="#BB86FC"
+            android:pathData="M20,7L20,22L12.5,14.5L10,17L19,26L19,50L25,44L31,50L33.5,47.5L25,39L25,33L33.5,24.5L31,22L25,28L25,2L19,8L10,17L12.5,14.5L20,7Z
+                M22,8L22,18L28,12L22,8Z
+                M22,32L22,42L28,38L22,32Z"/>
+    </group>
+    
+    <!-- Left signal waves -->
+    <path
+        android:strokeColor="#03DAC6"
+        android:strokeWidth="2.5"
+        android:strokeLineCap="round"
+        android:fillColor="#00000000"
+        android:pathData="M28,45 Q18,54 28,63"/>
+    
+    <path
+        android:strokeColor="#03DAC6"
+        android:strokeWidth="2"
+        android:strokeLineCap="round"
+        android:fillColor="#00000000"
+        android:pathData="M22,40 Q8,54 22,68"/>
+    
+    <!-- Right signal waves -->
+    <path
+        android:strokeColor="#03DAC6"
+        android:strokeWidth="2.5"
+        android:strokeLineCap="round"
+        android:fillColor="#00000000"
+        android:pathData="M80,45 Q90,54 80,63"/>
+    
+    <path
+        android:strokeColor="#03DAC6"
+        android:strokeWidth="2"
+        android:strokeLineCap="round"
+        android:fillColor="#00000000"
+        android:pathData="M86,40 Q100,54 86,68"/>
+    
+    <!-- "PRO" badge accent dots -->
+    <path
+        android:fillColor="#FF9800"
+        android:pathData="M54,82m-3,0a3,3 0,1 1,6 0a3,3 0,1 1,-6 0"/>
+    <path
+        android:fillColor="#BB86FC"
+        android:pathData="M45,82m-2,0a2,2 0,1 1,4 0a2,2 0,1 1,-4 0"/>
+    <path
+        android:fillColor="#BB86FC"
+        android:pathData="M63,82m-2,0a2,2 0,1 1,4 0a2,2 0,1 1,-4 0"/>
+</vector>
