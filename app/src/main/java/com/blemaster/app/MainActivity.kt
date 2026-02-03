@@ -81,6 +81,7 @@ fun BLEMasterApp() {
     val rotationEnabled by viewModel.rotationEnabled.collectAsState()
     val rotationPresets by viewModel.rotationPresets.collectAsState()
     val currentPresetName by viewModel.currentPresetName.collectAsState()
+    val advertisingMode by viewModel.advertisingMode.collectAsState()
 
     // Permission state
     var showPermissionDialog by remember { mutableStateOf(false) }
@@ -238,6 +239,8 @@ fun BLEMasterApp() {
                 onIntervalChange = { viewModel.updateBroadcastInterval(it) },
                 txPowerLevel = txPowerLevel,
                 onPowerLevelChange = { viewModel.updateTxPowerLevel(it) },
+                advertisingMode = advertisingMode,
+                onAdvertisingModeChange = { viewModel.updateAdvertisingMode(it) },
                 onNavigateBack = { navController.popBackStack() },
                 onShowPrivacyPolicy = { showPrivacyPolicy = true }
             )

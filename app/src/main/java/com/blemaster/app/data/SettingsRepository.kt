@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.*
 import androidx.datastore.preferences.preferencesDataStore
+import com.blemaster.app.ble.AdvertisingMode
 import com.blemaster.app.ble.TxPowerLevel
 import com.blemaster.app.ble.protocols.ProtocolType
 import kotlinx.coroutines.flow.Flow
@@ -25,12 +26,14 @@ class SettingsRepository(private val context: Context) {
         private val SWIFT_PAIR_DEVICE_NAME_KEY = stringPreferencesKey("swift_pair_device_name")
         private val ROTATION_ENABLED_KEY = booleanPreferencesKey("rotation_enabled")
         private val ROTATION_INTERVAL_KEY = longPreferencesKey("rotation_interval")
+        private val ADVERTISING_MODE_KEY = intPreferencesKey("advertising_mode")
 
         const val DEFAULT_INTERVAL_MS = 1000
         val DEFAULT_POWER_LEVEL = TxPowerLevel.MEDIUM
         val DEFAULT_PROTOCOL = ProtocolType.CUSTOM
         const val DEFAULT_SWIFT_PAIR_NAME = "BLE Master"
         const val DEFAULT_ROTATION_INTERVAL_MS = 1000L
+        val DEFAULT_ADVERTISING_MODE = AdvertisingMode.LEGACY  // Default to legacy for max compatibility
     }
 
     /**
@@ -89,6 +92,15 @@ class SettingsRepository(private val context: Context) {
      */
     val rotationIntervalFlow: Flow<Long> = context.dataStore.data.map { preferences ->
         preferences[ROTATION_INTERVAL_KEY] ?: DEFAULT_ROTATION_INTERVAL_MS
+    }
+    
+    /**
+     * Flow of the advertising mode (Legacy vs Extended).
+     * Legacy mode is default for maximum device compatibility.
+     */
+    val advertisingModeFlow: Flow<AdvertisingMode> = context.dataStore.data.map { preferences ->
+        val ordinal = preferences[ADVERTISING_MODE_KEY] ?: DEFAULT_ADVERTISING_MODE.ordinal
+        AdvertisingMode.entries.getOrElse(ordinal) { DEFAULT_ADVERTISING_MODE }
     }
 
     /**
@@ -160,6 +172,15 @@ class SettingsRepository(private val context: Context) {
     suspend fun saveRotationInterval(intervalMs: Long) {
         context.dataStore.edit { preferences ->
             preferences[ROTATION_INTERVAL_KEY] = intervalMs.coerceIn(500, 5000)
+        }
+    }
+    
+    /**
+     * Saves the advertising mode setting.
+     */
+    suspend fun saveAdvertisingMode(mode: AdvertisingMode) {
+        context.dataStore.edit { preferences ->
+            preferences[ADVERTISING_MODE_KEY] = mode.ordinal
         }
     }
 }

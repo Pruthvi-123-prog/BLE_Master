@@ -17,6 +17,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.blemaster.app.R
+import com.blemaster.app.ble.AdvertisingMode
 import com.blemaster.app.ble.TxPowerLevel
 import com.blemaster.app.ui.theme.*
 import kotlin.math.roundToInt
@@ -28,6 +29,8 @@ fun SettingsScreen(
     onIntervalChange: (Int) -> Unit,
     txPowerLevel: TxPowerLevel,
     onPowerLevelChange: (TxPowerLevel) -> Unit,
+    advertisingMode: AdvertisingMode,
+    onAdvertisingModeChange: (AdvertisingMode) -> Unit,
     onNavigateBack: () -> Unit,
     onShowPrivacyPolicy: () -> Unit,
     modifier: Modifier = Modifier
@@ -82,6 +85,16 @@ fun SettingsScreen(
                 PowerLevelSelector(
                     selectedLevel = txPowerLevel,
                     onLevelChange = onPowerLevelChange
+                )
+            }
+
+            Spacer(modifier = Modifier.height(24.dp))
+            
+            // Advertising Mode Section
+            SettingsSection(title = "Device Compatibility") {
+                AdvertisingModeSelector(
+                    selectedMode = advertisingMode,
+                    onModeChange = onAdvertisingModeChange
                 )
             }
 
@@ -273,6 +286,125 @@ private fun PowerLevelSelector(
                             style = MaterialTheme.typography.labelMedium,
                             color = textColor,
                             fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun AdvertisingModeSelector(
+    selectedMode: AdvertisingMode,
+    onModeChange: (AdvertisingMode) -> Unit
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(
+            containerColor = Surface
+        ),
+        shape = RoundedCornerShape(12.dp)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp)
+        ) {
+            // Mode selection
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 12.dp),
+                horizontalArrangement = Arrangement.SpaceEvenly
+            ) {
+                AdvertisingMode.entries.forEach { mode ->
+                    val isSelected = mode == selectedMode
+                    val backgroundColor = if (isSelected) Accent else Surface
+                    val textColor = if (isSelected) Black else OnSurfaceVariant
+
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .padding(4.dp)
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(backgroundColor)
+                            .clickable { onModeChange(mode) }
+                            .padding(vertical = 16.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            Icon(
+                                imageVector = when (mode) {
+                                    AdvertisingMode.LEGACY -> Icons.Default.PhonelinkSetup
+                                    AdvertisingMode.EXTENDED -> Icons.Default.Speed
+                                },
+                                contentDescription = null,
+                                tint = textColor,
+                                modifier = Modifier.size(24.dp)
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text(
+                                text = when (mode) {
+                                    AdvertisingMode.LEGACY -> "Legacy"
+                                    AdvertisingMode.EXTENDED -> "Extended"
+                                },
+                                style = MaterialTheme.typography.labelMedium,
+                                color = textColor,
+                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
+                            )
+                        }
+                    }
+                }
+            }
+            
+            // Info card based on selected mode
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(
+                    containerColor = if (selectedMode == AdvertisingMode.LEGACY) 
+                        Accent.copy(alpha = 0.1f) 
+                    else 
+                        Warning.copy(alpha = 0.1f)
+                ),
+                shape = RoundedCornerShape(8.dp)
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(12.dp),
+                    verticalAlignment = Alignment.Top
+                ) {
+                    Icon(
+                        imageVector = if (selectedMode == AdvertisingMode.LEGACY)
+                            Icons.Default.CheckCircle
+                        else
+                            Icons.Default.Warning,
+                        contentDescription = null,
+                        tint = if (selectedMode == AdvertisingMode.LEGACY) Accent else Warning,
+                        modifier = Modifier.size(20.dp)
+                    )
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Column {
+                        Text(
+                            text = if (selectedMode == AdvertisingMode.LEGACY)
+                                "Maximum Compatibility"
+                            else
+                                "Limited Compatibility",
+                            style = MaterialTheme.typography.labelLarge,
+                            color = if (selectedMode == AdvertisingMode.LEGACY) Accent else Warning,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = if (selectedMode == AdvertisingMode.LEGACY)
+                                "Uses LE 1M PHY and legacy PDUs. Works with all BLE devices including older BT 5.0 phones. Payload limit: 20 bytes."
+                            else
+                                "Uses modern BT 5.x features. May NOT be detected by older or budget devices (e.g., Samsung M02). Payload limit: 24 bytes.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = OnSurfaceVariant
                         )
                     }
                 }

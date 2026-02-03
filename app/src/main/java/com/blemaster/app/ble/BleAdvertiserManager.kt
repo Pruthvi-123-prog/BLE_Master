@@ -1,14 +1,19 @@
 package com.blemaster.app.ble
 
 import android.bluetooth.BluetoothAdapter
+import android.bluetooth.BluetoothDevice
 import android.bluetooth.BluetoothManager
 import android.bluetooth.le.AdvertiseCallback
 import android.bluetooth.le.AdvertiseData
 import android.bluetooth.le.AdvertiseSettings
+import android.bluetooth.le.AdvertisingSet
+import android.bluetooth.le.AdvertisingSetCallback
+import android.bluetooth.le.AdvertisingSetParameters
 import android.bluetooth.le.BluetoothLeAdvertiser
 import android.content.Context
 import android.os.Build
 import android.util.Log
+import androidx.annotation.RequiresApi
 import androidx.annotation.RequiresPermission
 import com.blemaster.app.ble.protocols.*
 import kotlinx.coroutines.*
@@ -27,6 +32,7 @@ class BleAdvertiserManager(private val context: Context) {
         private const val TAG = "BleAdvertiserManager"
         private const val MANUFACTURER_ID = 0xFFFF // Experimental/testing ID
         private const val MAX_PAYLOAD_BYTES = 24
+        private const val MAX_PAYLOAD_BYTES_LEGACY = 20  // Legacy mode has stricter limit
         private const val MAX_RETRY_ATTEMPTS = 5
         private const val INITIAL_RETRY_DELAY_MS = 100L
         private const val DEFAULT_ROTATION_INTERVAL_MS = 1000L
@@ -48,6 +54,11 @@ class BleAdvertiserManager(private val context: Context) {
     // Current broadcast configuration
     private var currentConfig: BroadcastConfig? = null
     private var rotationIndex = 0
+    
+    // Legacy mode support for older BLE devices
+    private var legacyModeEnabled: Boolean = true
+    private var currentAdvertisingSet: AdvertisingSet? = null
+    private var advertisingSetCallback: AdvertisingSetCallback? = null
 
     private val _isAdvertising = MutableStateFlow(false)
     val isAdvertising: StateFlow<Boolean> = _isAdvertising.asStateFlow()
@@ -60,6 +71,9 @@ class BleAdvertiserManager(private val context: Context) {
 
     private val _errorState = MutableStateFlow<AdvertiseError?>(null)
     val errorState: StateFlow<AdvertiseError?> = _errorState.asStateFlow()
+    
+    private val _advertisingMode = MutableStateFlow(AdvertisingMode.LEGACY)
+    val advertisingMode: StateFlow<AdvertisingMode> = _advertisingMode.asStateFlow()
 
     /**
      * Checks if BLE advertising is supported on this device.
@@ -297,8 +311,26 @@ class BleAdvertiserManager(private val context: Context) {
     }
     
     /**
+     * Sets the advertising mode (Legacy for older devices, Extended for BT 5.0+).
+     */
+    fun setAdvertisingMode(mode: AdvertisingMode) {
+        _advertisingMode.value = mode
+        legacyModeEnabled = (mode == AdvertisingMode.LEGACY)
+        Log.d(TAG, "Advertising mode set to: $mode (legacyEnabled=$legacyModeEnabled)")
+    }
+    
+    /**
+     * Returns the maximum payload size based on current mode.
+     * Legacy: 20 bytes, Extended: 24 bytes
+     */
+    fun getMaxPayloadForCurrentMode(): Int {
+        return if (legacyModeEnabled) MAX_PAYLOAD_BYTES_LEGACY else MAX_PAYLOAD_BYTES
+    }
+    
+    /**
      * Internal method to start advertising with pre-built data.
-     * Uses scan response when available for additional data payload.
+     * Uses AdvertisingSet API with legacy mode for Android 8+ for better compatibility.
+     * Falls back to standard advertising on older Android versions.
      */
     @RequiresPermission(android.Manifest.permission.BLUETOOTH_ADVERTISE)
     private fun startAdvertisingInternal(
@@ -328,6 +360,103 @@ class BleAdvertiserManager(private val context: Context) {
         retryCount = 0
         _errorState.value = null
 
+        // Use AdvertisingSet API for Android 8+ with legacy mode for better device compatibility
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && legacyModeEnabled) {
+            startAdvertisingWithLegacyMode(bleAdvertiser, advertiseData, scanResponse, settings, onError)
+        } else {
+            startAdvertisingStandard(bleAdvertiser, advertiseData, scanResponse, settings, onError)
+        }
+    }
+    
+    /**
+     * Starts advertising using AdvertisingSet API with legacy PDUs.
+     * This ensures compatibility with BT 5.0 and older devices.
+     */
+    @RequiresApi(Build.VERSION_CODES.O)
+    @RequiresPermission(android.Manifest.permission.BLUETOOTH_ADVERTISE)
+    private fun startAdvertisingWithLegacyMode(
+        bleAdvertiser: BluetoothLeAdvertiser,
+        advertiseData: AdvertiseData,
+        scanResponse: AdvertiseData?,
+        settings: AdvertiseSettings,
+        onError: ((AdvertiseError) -> Unit)?
+    ) {
+        val txPowerLevel = when (settings.txPowerLevel) {
+            AdvertiseSettings.ADVERTISE_TX_POWER_HIGH -> AdvertisingSetParameters.TX_POWER_HIGH
+            AdvertiseSettings.ADVERTISE_TX_POWER_MEDIUM -> AdvertisingSetParameters.TX_POWER_MEDIUM
+            AdvertiseSettings.ADVERTISE_TX_POWER_LOW -> AdvertisingSetParameters.TX_POWER_LOW
+            else -> AdvertisingSetParameters.TX_POWER_MEDIUM
+        }
+        
+        val parameters = AdvertisingSetParameters.Builder()
+            .setLegacyMode(true)  // Force legacy PDUs for BT 5.0 compatibility
+            .setConnectable(true)  // Better discoverability
+            .setScannable(true)    // Allow scan requests for scan response
+            .setInterval(AdvertisingSetParameters.INTERVAL_LOW)  // Fast advertising
+            .setTxPowerLevel(txPowerLevel)
+            .setPrimaryPhy(BluetoothDevice.PHY_LE_1M)  // LE 1M PHY for max compatibility
+            .build()
+        
+        advertisingSetCallback = object : AdvertisingSetCallback() {
+            override fun onAdvertisingSetStarted(
+                advertisingSet: AdvertisingSet?,
+                txPower: Int,
+                status: Int
+            ) {
+                if (status == AdvertisingSetCallback.ADVERTISE_SUCCESS) {
+                    Log.d(TAG, "Legacy advertising started successfully (PHY_LE_1M)")
+                    currentAdvertisingSet = advertisingSet
+                    _isAdvertising.value = true
+                    _errorState.value = null
+                } else {
+                    Log.e(TAG, "Legacy advertising failed with status: $status")
+                    val error = mapAdvertisingSetStatus(status)
+                    _isAdvertising.value = false
+                    _errorState.value = error
+                    onError?.invoke(error)
+                }
+            }
+            
+            override fun onAdvertisingSetStopped(advertisingSet: AdvertisingSet?) {
+                Log.d(TAG, "Legacy advertising stopped")
+                currentAdvertisingSet = null
+                _isAdvertising.value = false
+            }
+        }
+        
+        try {
+            bleAdvertiser.startAdvertisingSet(
+                parameters,
+                advertiseData,
+                scanResponse,
+                null,  // No periodic advertising
+                null,  // No duration
+                advertisingSetCallback
+            )
+            Log.d(TAG, "Started legacy mode advertising with AdvertisingSet API")
+        } catch (e: SecurityException) {
+            Log.e(TAG, "SecurityException: Missing BLUETOOTH_ADVERTISE permission", e)
+            val error = AdvertiseError.PermissionDenied
+            _errorState.value = error
+            onError?.invoke(error)
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to start legacy advertising, falling back to standard", e)
+            startAdvertisingStandard(bleAdvertiser, advertiseData, scanResponse, settings, onError)
+        }
+    }
+    
+    /**
+     * Standard advertising using the classic API.
+     * Used for pre-Android 8 or when extended mode is preferred.
+     */
+    @RequiresPermission(android.Manifest.permission.BLUETOOTH_ADVERTISE)
+    private fun startAdvertisingStandard(
+        bleAdvertiser: BluetoothLeAdvertiser,
+        advertiseData: AdvertiseData,
+        scanResponse: AdvertiseData?,
+        settings: AdvertiseSettings,
+        onError: ((AdvertiseError) -> Unit)?
+    ) {
         currentCallback = object : AdvertiseCallback() {
             override fun onStartSuccess(settingsInEffect: AdvertiseSettings?) {
                 Log.d(TAG, "Advertising started successfully: ${_currentProtocol.value}")
@@ -346,19 +475,30 @@ class BleAdvertiserManager(private val context: Context) {
         }
 
         try {
-            // Use startAdvertising with scan response for better discoverability
             if (scanResponse != null) {
                 bleAdvertiser.startAdvertising(settings, advertiseData, scanResponse, currentCallback)
-                Log.d(TAG, "Started advertising with scan response")
+                Log.d(TAG, "Started standard advertising with scan response")
             } else {
                 bleAdvertiser.startAdvertising(settings, advertiseData, currentCallback)
-                Log.d(TAG, "Started advertising without scan response")
+                Log.d(TAG, "Started standard advertising without scan response")
             }
         } catch (e: SecurityException) {
             Log.e(TAG, "SecurityException: Missing BLUETOOTH_ADVERTISE permission", e)
             val error = AdvertiseError.PermissionDenied
             _errorState.value = error
             onError?.invoke(error)
+        }
+    }
+    
+    @RequiresApi(Build.VERSION_CODES.O)
+    private fun mapAdvertisingSetStatus(status: Int): AdvertiseError {
+        return when (status) {
+            AdvertisingSetCallback.ADVERTISE_FAILED_DATA_TOO_LARGE -> AdvertiseError.DataTooLarge
+            AdvertisingSetCallback.ADVERTISE_FAILED_TOO_MANY_ADVERTISERS -> AdvertiseError.TooManyAdvertisers
+            AdvertisingSetCallback.ADVERTISE_FAILED_ALREADY_STARTED -> AdvertiseError.AlreadyStarted
+            AdvertisingSetCallback.ADVERTISE_FAILED_INTERNAL_ERROR -> AdvertiseError.InternalError
+            AdvertisingSetCallback.ADVERTISE_FAILED_FEATURE_UNSUPPORTED -> AdvertiseError.FeatureUnsupported
+            else -> AdvertiseError.Unknown(status)
         }
     }
 
@@ -377,9 +517,27 @@ class BleAdvertiserManager(private val context: Context) {
     
     /**
      * Internal stop without affecting rotation job.
+     * Handles both standard and AdvertisingSet advertising.
      */
     @RequiresPermission(android.Manifest.permission.BLUETOOTH_ADVERTISE)
     private fun stopAdvertisingInternal() {
+        // Stop AdvertisingSet if using legacy mode
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            currentAdvertisingSet?.let { advSet ->
+                try {
+                    advertisingSetCallback?.let { callback ->
+                        advertiser?.stopAdvertisingSet(callback)
+                    }
+                    Log.d(TAG, "Stopped AdvertisingSet")
+                } catch (e: SecurityException) {
+                    Log.e(TAG, "SecurityException while stopping AdvertisingSet", e)
+                }
+            }
+            currentAdvertisingSet = null
+            advertisingSetCallback = null
+        }
+        
+        // Stop standard advertising
         currentCallback?.let { callback ->
             try {
                 advertiser?.stopAdvertising(callback)
@@ -440,4 +598,18 @@ sealed class AdvertiseError {
     object InternalError : AdvertiseError()
     object FeatureUnsupported : AdvertiseError()
     data class Unknown(val errorCode: Int) : AdvertiseError()
+}
+
+/**
+ * Advertising mode selection for device compatibility.
+ * 
+ * LEGACY: Uses LE 1M PHY and legacy PDUs for maximum compatibility with older BT 5.0 devices.
+ *         Limited to 20-byte payloads. Recommended for cross-device compatibility.
+ * 
+ * EXTENDED: Uses modern BT 5.x features for longer payloads (up to 24 bytes).
+ *           May not be detected by older devices with budget BLE chipsets.
+ */
+enum class AdvertisingMode {
+    LEGACY,    // Max compatibility with BT 5.0 devices (20 byte limit)
+    EXTENDED   // Modern mode with extended features (24 byte limit)
 }

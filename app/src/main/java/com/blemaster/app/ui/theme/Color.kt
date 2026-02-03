@@ -30,3 +30,4 @@ val Broadcasting = Color(0xFF4CAF50)     // Green - active
 val Scanning = Color(0xFF2196F3)         // Blue - scanning
 val Idle = Color(0xFF757575)             // Grey - idle
 val RotationActive = Color(0xFFFF9800)   // Orange - rotation mode
+val Warning = Color(0xFFFF9800)          // Orange - warning messages

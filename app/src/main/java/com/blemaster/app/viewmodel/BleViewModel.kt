@@ -9,6 +9,7 @@ import android.os.IBinder
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.blemaster.app.ble.AdvertiseError
+import com.blemaster.app.ble.AdvertisingMode
 import com.blemaster.app.ble.BleAdvertiserManager
 import com.blemaster.app.ble.BleScannerManager
 import com.blemaster.app.ble.DiscoveredDevice
@@ -82,6 +83,9 @@ class BleViewModel(application: Application) : AndroidViewModel(application) {
     
     val rotationInterval: StateFlow<Long> = settingsRepository.rotationIntervalFlow
         .stateIn(viewModelScope, SharingStarted.Eagerly, SettingsRepository.DEFAULT_ROTATION_INTERVAL_MS)
+    
+    val advertisingMode: StateFlow<AdvertisingMode> = settingsRepository.advertisingModeFlow
+        .stateIn(viewModelScope, SharingStarted.Eagerly, SettingsRepository.DEFAULT_ADVERTISING_MODE)
 
     // Computed properties
     val messageByteCount: StateFlow<Int> = _message.map { msg ->
@@ -194,6 +198,17 @@ class BleViewModel(application: Application) : AndroidViewModel(application) {
     fun updateTxPowerLevel(powerLevel: TxPowerLevel) {
         viewModelScope.launch {
             settingsRepository.saveTxPowerLevel(powerLevel)
+        }
+    }
+    
+    /**
+     * Updates the advertising mode (Legacy vs Extended).
+     * Also updates the advertiser manager immediately.
+     */
+    fun updateAdvertisingMode(mode: AdvertisingMode) {
+        viewModelScope.launch {
+            settingsRepository.saveAdvertisingMode(mode)
+            advertiserManager.setAdvertisingMode(mode)
         }
     }
 
