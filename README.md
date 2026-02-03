@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="Resized_Images/original.png" alt="BLE Master Pro" width="160" style="border-radius: 24px;"/>
+  <img src="LS20260203094005.png" alt="BLE Master Pro" width="160" style="border-radius: 24px;"/>
 </p>
 
 <h1 align="center">BLE Master Pro</h1>
